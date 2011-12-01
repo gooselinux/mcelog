@@ -1,0 +1,79 @@
+diff -urNp mcelog-1.0pre3.orig/Makefile mcelog-1.0pre3/Makefile
+--- mcelog-1.0pre3.orig/Makefile	2010-04-08 08:54:24.103743658 -0400
++++ mcelog-1.0pre3/Makefile	2010-04-08 09:17:47.189815312 -0400
+@@ -56,6 +56,7 @@ install: mcelog
+ 	install -m 755 -p mcelog ${prefix}/sbin/mcelog
+ 	install -m 644 -p mcelog.8 ${prefix}/share/man/man8
+ 	install -m 644 -p -b mcelog.conf ${etcprefix}/etc/mcelog/mcelog.conf
++	install -p mcelog.sysconfig ${etcprefex}/etc/sysconfig/mcelogd
+ 	for i in ${TRIGGERS} ; do 						\
+ 		install -m 755 -p -b triggers/$$i ${etcprefix}/etc/mcelog ; 	\
+ 	done
+diff -urNp mcelog-1.0pre3.orig/mcelog.init mcelog-1.0pre3/mcelog.init
+--- mcelog-1.0pre3.orig/mcelog.init	2010-04-08 08:54:24.091533476 -0400
++++ mcelog-1.0pre3/mcelog.init	2010-04-08 09:18:11.973535124 -0400
+@@ -15,19 +15,11 @@
+ # Description:          Start the mcelog hardware error logging. 
+ #                       This logs and handles CPU hardware errors on x86 systems.
+ ### END INIT INFO
++# pull in sysconfig settings
++[ -f /etc/sysconfig/mcelogd ] && . /etc/sysconfig/mcelogd
+ 
+-# put this is sysconfig
+-
+-# mcelog mode
+-# valid values: daemon, trigger, cron
+-# Recommended value daemon
+-MCELOG_MODE=daemon
+-
+-# additional options to pass to the daemon
+-# this only works in daemon mode
+-# see the manpage for details. settings can be also
+-# set in /etc/mcelog.conf
+-MCELOG_OPTIONS=""
++# Source function library.
++. /etc/init.d/functions
+ 
+ # private settings
+ MCELOG=${MCELOG:-/usr/sbin/mcelog}
+@@ -53,7 +45,7 @@ case "$1" in
+ start)
+ 	if [ "$MCELOG_MODE" = "daemon" ] ; then
+ 		echo "Starting mcelog daemon"
+-		startproc $MCELOG --daemon $MCELOG_OPTIONS
++		daemon $MCELOG --daemon $MCELOG_OPTIONS
+ 	elif [ -f "$TRIGGER" ] ; then
+ 		echo $MCELOG > "$TRIGGER"
+ 	else
+@@ -63,7 +55,7 @@ start)
+ stop)
+ 	if [ "$MCELOG_MODE" = "daemon" ] ; then
+ 		echo "Stopping mcelog"
+-		killproc -TERM $MCELOG
++		killproc $MCELOG -TERM
+ 	elif [ "$MCELOG_MODE" = "trigger" -a -f "$TRIGGER" ]; then 
+ 		echo "" > "$TRIGGER"
+ 	else
+@@ -86,7 +78,7 @@ force-reload)
+ status)
+ 	if [ "$MCELOG_MODE" = "daemon" ] ; then
+ 		echo "Checking for mcelog"
+-		checkproc $MCELOG
++		status $MCELOG
+ 	fi
+ 	;;
+ *)
+diff -urNp mcelog-1.0pre3.orig/mcelog.sysconfig mcelog-1.0pre3/mcelog.sysconfig
+--- mcelog-1.0pre3.orig/mcelog.sysconfig	1969-12-31 19:00:00.000000000 -0500
++++ mcelog-1.0pre3/mcelog.sysconfig	2010-04-08 09:15:46.494751944 -0400
+@@ -0,0 +1,10 @@
++# mcelog mode
++# valid values: daemon, trigger, cron
++# Recommended value daemon
++MCELOG_MODE=daemon
++
++# additional options to pass to the daemon
++# this only works in daemon mode
++# see the manpage for details. settings can be also
++# set in /etc/mcelog.conf
++MCELOG_OPTIONS=""
